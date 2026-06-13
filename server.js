@@ -142,6 +142,10 @@ app.get("/api/users", requireSession, async (req, res) => {
 const matchCache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+// Coach cache: key = convKey(uid1,uid2), TTL 30 min
+const coachCache = new Map();
+const COACH_TTL_MS = 30 * 60 * 1000;
+
 function jaccardScore(a, b) {
   const setA = new Set(a);
   const setB = new Set(b);
@@ -310,6 +314,76 @@ app.get("/api/messages/:targetId", requireSession, (req, res) => {
   const status = getConnectionStatus(req.uid, req.params.targetId);
   if (status !== "accepted") return res.status(403).json({ error: "繋がっていません" });
   res.json({ messages: getMessages(req.uid, req.params.targetId) });
+});
+
+// --- AI Study Partner Coach --------------------------------------------------
+
+function convKeyStr(a, b) { return [a, b].sort().join("_"); }
+
+app.post("/api/coach/:targetId", requireSession, async (req, res) => {
+  try {
+    const { targetId } = req.params;
+    const status = getConnectionStatus(req.uid, targetId);
+    if (status !== "accepted") return res.status(403).json({ error: "繋がっていません" });
+
+    const cacheKey = convKeyStr(req.uid, targetId);
+    const cached = coachCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return res.json(cached.result);
+
+    const [me, partner] = await Promise.all([getUser(req.uid), getUser(targetId)]);
+    if (!me?.profile?.profileComplete || !partner?.profile?.profileComplete) {
+      return res.status(400).json({ error: "プロフィールを完成させてください" });
+    }
+
+    let result;
+
+    if (genAI) {
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const prompt = `あなたは勉強パートナーコーチングAIです。
+以下の2人のプロフィールを読み、この2人のための具体的な勉強パートナーシッププランと、最初に送るとよいメッセージを生成してください。
+タグや分野の一致だけでなく、勉強スタイル・動機・感情的なニーズを深く読み取ってください。
+
+【ユーザーA（あなた）】
+ニックネーム: ${me.profile.nickname}
+所属: ${me.profile.affiliation}
+分野: ${me.profile.studyFields.join(", ")}
+目標: ${me.profile.goal}
+自己紹介: ${me.profile.bio}
+
+【ユーザーB（相手）】
+ニックネーム: ${partner.profile.nickname}
+所属: ${partner.profile.affiliation}
+分野: ${partner.profile.studyFields.join(", ")}
+目標: ${partner.profile.goal}
+自己紹介: ${partner.profile.bio}
+
+以下のJSON形式のみで返答してください（他の説明文は不要）:
+{
+  "compatibility": "（この2人が合う理由を1〜2文。感情・学習スタイルの視点で温かく）",
+  "plan": ["（具体的な行動1）", "（具体的な行動2）", "（具体的な行動3）"],
+  "firstMessage": "（ユーザーAが相手に送る、自然で温かみのある最初のメッセージ。30〜60文字程度）"
+}`;
+
+      const geminiRes = await model.generateContent(prompt);
+      const text = geminiRes.response.text().trim();
+      const jsonText = text.replace(/^```json\s*/i, "").replace(/```\s*$/, "").trim();
+      result = JSON.parse(jsonText);
+    } else {
+      // Fallback without Gemini
+      const shared = me.profile.studyFields.filter((f) => partner.profile.studyFields.includes(f));
+      result = {
+        compatibility: `${me.profile.nickname}さんと${partner.profile.nickname}さんは${shared.length > 0 ? shared.join("・") + "という共通の分野で" : "同じ目標に向かって"}取り組んでいます。`,
+        plan: ["週1回、今週やったことを短く共有する", "わからなかったことを気軽に質問し合う", "お互いの目標の進捗を定期的に確認する"],
+        firstMessage: `${partner.profile.nickname}さん、はじめまして！お互い${shared[0] || "勉強"}頑張っていますね。一緒に進められたら嬉しいです！`,
+      };
+    }
+
+    coachCache.set(cacheKey, { result, expiresAt: Date.now() + COACH_TTL_MS });
+    res.json(result);
+  } catch (err) {
+    console.error("Coach error:", err.message);
+    res.status(500).json({ error: "コーチデータの生成に失敗しました: " + err.message });
+  }
 });
 
 app.listen(PORT, () => console.log(`http://localhost:${PORT}`));
