@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in</title>
+  <script src="https://accounts.google.com/gsi/client" async></script>
+  <style>
+    body { font-family: system-ui, sans-serif; display: grid; place-items: center;
+           min-height: 100vh; margin: 0; background: #fafafa; }
+    .card { text-align: center; }
+    #status { margin-top: 1rem; color: #555; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Welcome</h1>
+    <!-- Replace data-client_id with your real Google OAuth client ID -->
+    <div id="g_id_onload"
+         data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+         data-callback="onSignIn"></div>
+    <div class="g_id_signin" data-type="standard" data-theme="filled_blue"
+         data-text="continue_with" data-shape="pill"></div>
+    <p id="status"></p>
+  </div>
+
+  <script>
+    async function onSignIn(response) {
+      // response.credential is the Google ID token (a JWT).
+      const r = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      const data = await r.json();
+      const el = document.getElementById("status");
+      el.textContent = r.ok
+        ? `${data.isNew ? "Account created" : "Signed in"} as ${data.user.email}`
+        : `Error: ${data.error}`;
+    }
+  </script>
+</body>
+</html>
