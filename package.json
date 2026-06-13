@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "start": "node --env-file=.env server.js"
+    "start": "node server.js",
+    "dev": "node --env-file=.env server.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
