@@ -365,6 +365,23 @@
     let connections = [];
     let pending = [];
 
+    const DAYS_JA = ["月", "火", "水", "木", "金", "土", "日"];
+
+    function nextDateForDay(ourDay) {
+      const today = new Date();
+      const todayJs = today.getDay();          // 0=日〜6=土
+      const targetJs = (ourDay + 1) % 7;      // 0=月→1, 6=日→0
+      const diff = (targetJs - todayJs + 7) % 7;
+      const d = new Date(today);
+      d.setDate(today.getDate() + diff);
+      return d;
+    }
+
+    function dateLabel(ourDay) {
+      const d = nextDateForDay(ourDay);
+      return `${d.getMonth() + 1}/${d.getDate()}(${DAYS_JA[ourDay]})`;
+    }
+
     function esc(str) {
       return String(str ?? "")
         .replace(/&/g, "&amp;").replace(/</g, "&lt;")
@@ -633,7 +650,7 @@
               <span style="font-size:1.1rem">⭐</span>
               <div>
                 <div class="best-slot-label">おすすめの勉強時間</div>
-                <div class="best-slot-time">${esc(data.bestSlot.label)}</div>
+                <div class="best-slot-time">${dateLabel(data.bestSlot.day)} ${esc(data.bestSlot.start)}〜${esc(data.bestSlot.end)}</div>
               </div>
             </div>`;
         }
@@ -641,7 +658,7 @@
           html += `
             <div class="plan-title">二人とも空いている時間</div>
             <div class="avail-windows">
-              ${data.windows.map((w) => `<span class="avail-chip">${esc(w.dayLabel)} ${esc(w.start)}〜${esc(w.end)}</span>`).join("")}
+              ${data.windows.map((w) => `<span class="avail-chip">${dateLabel(w.day)} ${esc(w.start)}〜${esc(w.end)}</span>`).join("")}
             </div>`;
         }
         if (!data.myHasData) {
