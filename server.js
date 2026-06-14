@@ -105,8 +105,7 @@ app.post("/api/auth/logout", (req, res) => {
 
 app.get("/api/profile", requireSession, async (req, res) => {
   const user = await getUser(req.uid);
-  if (!user) return res.status(404).json({ error: "User not found" });
-  res.json({ profile: user.profile || {} });
+  res.json({ profile: user?.profile || {} });
 });
 
 app.put("/api/profile", requireSession, async (req, res) => {
