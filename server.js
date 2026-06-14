@@ -687,6 +687,59 @@ app.post("/api/groups/:groupId/availability", requireSession, async (req, res) =
   }
 });
 
+// --- Gemini in-chat Q&A (response returned only to requester, never stored) ---
+
+app.post("/api/ask-gemini/:targetId", requireSession, async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question?.trim()) return res.status(400).json({ error: "質問が空です" });
+
+    const status = getConnectionStatus(req.uid, req.params.targetId);
+    if (status !== "accepted") return res.status(403).json({ error: "繋がっていません" });
+
+    const [me, partner] = await Promise.all([
+      getUser(req.uid),
+      getUser(req.params.targetId),
+    ]);
+    if (!me || !partner) return res.status(404).json({ error: "ユーザーが見つかりません" });
+
+    const recentMsgs = getMessages(req.uid, req.params.targetId).slice(-10);
+
+    if (!genAI) {
+      return res.json({ text: `（Gemini未設定）「${question}」への回答を準備できません。` });
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const chatContext = recentMsgs
+      .map((m) => {
+        const name = m.fromId === req.uid
+          ? (me.profile?.nickname || "自分")
+          : (partner.profile?.nickname || "相手");
+        return `${name}: ${m.text}`;
+      })
+      .join("\n");
+
+    const prompt = `あなたは2人の勉強パートナーをサポートするAIアシスタントです。
+
+【ユーザー情報】
+${me.profile?.nickname || "自分"}（${me.profile?.privateAffiliation || ""}）: ${(me.profile?.studyFields || []).join(", ")} を勉強中。目標: ${me.profile?.goal || ""}
+${partner.profile?.nickname || "相手"}（${partner.profile?.privateAffiliation || ""}）: ${(partner.profile?.studyFields || []).join(", ")} を勉強中。目標: ${partner.profile?.goal || ""}
+${chatContext ? `\n【最近の会話】\n${chatContext}\n` : ""}
+【質問】
+${question.trim()}
+
+日本語で、丁寧かつ簡潔に答えてください（300文字以内を目安）。`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    res.json({ text });
+  } catch (err) {
+    console.error("Ask Gemini error:", err.message);
+    res.status(500).json({ error: "Geminiの回答生成に失敗しました: " + err.message });
+  }
+});
+
 app.post("/api/groups/:groupId/messages", requireSession, (req, res) => {
   const { text } = req.body;
   if (!text?.trim()) return res.status(400).json({ error: "メッセージが空です" });

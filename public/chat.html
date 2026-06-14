@@ -204,6 +204,43 @@
     .send-btn:hover { background: var(--teal-600); }
     .send-btn:disabled { opacity: 0.5; cursor: default; }
 
+    /* Chat body active state (flex column, messages scroll) */
+    .chat-body-active {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    /* Gemini bubble */
+    .bubble.gemini {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      max-width: 85%;
+      white-space: pre-wrap;
+    }
+    .gemini-label {
+      font-size: 0.68rem;
+      color: #764ba2;
+      margin-bottom: 2px;
+      font-weight: 700;
+    }
+    .ask-gemini-btn {
+      padding: 0.65rem 0.9rem;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      border: none;
+      border-radius: var(--r-pill);
+      font-size: 0.9rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: opacity 0.15s;
+    }
+    .ask-gemini-btn:disabled { opacity: 0.5; cursor: default; }
+
     @media (max-width: 640px) {
       .sidebar { position: absolute; z-index: 10; height: calc(100vh - 56px); transform: translateX(-100%); transition: transform 0.2s; }
       .sidebar.show { transform: translateX(0); }
@@ -255,6 +292,7 @@
     let groups = [];
     let memberGroups = new Set();
     let showingGroupForm = false;
+    let localGeminiMessages = [];
 
     function esc(str) {
       return String(str ?? "")
@@ -296,6 +334,7 @@
       document.getElementById("tab-conn").classList.toggle("active", tab === "connections");
       document.getElementById("tab-pend").classList.toggle("active", tab === "pending");
       document.getElementById("tab-grp").classList.toggle("active", tab === "groups");
+      localGeminiMessages = [];
       showingGroupForm = false;
       renderSidebar();
       document.getElementById("chat-body").className = "no-chat";
@@ -450,8 +489,10 @@
       currentGroupId = null;
       renderSidebar();
 
+      localGeminiMessages = [];
+
       const chatBody = document.getElementById("chat-body");
-      chatBody.className = "";
+      chatBody.className = "chat-body-active";
       chatBody.innerHTML = `
         <div class="chat-header">
           <div class="contact-name">${esc(partnerName)}</div>
@@ -478,8 +519,9 @@
           <div style="text-align:center;color:var(--muted);font-size:0.8rem;padding:1rem">読み込み中…</div>
         </div>
         <div class="input-bar">
-          <input type="text" id="msg-input" placeholder="メッセージを入力…"
+          <input type="text" id="msg-input" placeholder="メッセージ / Geminiへの質問を入力…"
             onkeydown="if(event.key==='Enter')sendMsg()" />
+          <button class="ask-gemini-btn" id="ask-gemini-btn" onclick="askGemini()" title="Geminiに質問（自分だけ表示）">🤖</button>
           <button class="send-btn" id="send-btn" onclick="sendMsg()">送信</button>
         </div>`;
 
@@ -671,7 +713,10 @@
         const r = await fetch(`/api/messages/${currentPartnerId}`);
         if (!r.ok) return;
         const { messages } = await r.json();
-        renderMessages(messages, false);
+        // merge server messages with local Gemini responses, sorted by time
+        const merged = [...messages, ...localGeminiMessages]
+          .sort((a, b) => a.createdAt - b.createdAt);
+        renderMessages(merged, false);
       } catch {}
     }
 
@@ -686,6 +731,13 @@
       }
 
       wrap.innerHTML = msgs.map((m) => {
+        if (m.fromId === "gemini") {
+          return `<div style="display:flex;flex-direction:column;align-items:flex-start">
+            <div class="gemini-label">🤖 Gemini（あなただけに表示）</div>
+            <div class="bubble gemini">${esc(m.text)}</div>
+            <div class="bubble-time">${fmtTime(m.createdAt)}</div>
+          </div>`;
+        }
         const isMine = m.fromId === myId;
         const senderLine = isGroup && !isMine
           ? `<div class="bubble-sender">${esc(m.fromNickname || m.fromId)}</div>` : "";
@@ -697,6 +749,35 @@
       }).join("");
 
       if (atBottom) wrap.scrollTop = wrap.scrollHeight;
+    }
+
+    async function askGemini() {
+      const input = document.getElementById("msg-input");
+      const btn = document.getElementById("ask-gemini-btn");
+      if (!input || !currentPartnerId) return;
+      const question = input.value.trim();
+      if (!question) return;
+
+      input.value = "";
+      btn.disabled = true;
+      btn.textContent = "⏳";
+      try {
+        const r = await fetch(`/api/ask-gemini/${currentPartnerId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+        const data = await r.json();
+        if (!r.ok) { alert(data.error || "Geminiの回答取得に失敗しました"); return; }
+        localGeminiMessages.push({ id: `g_${Date.now()}`, fromId: "gemini", text: data.text, createdAt: Date.now() });
+        await fetchMessages();
+      } catch {
+        alert("Geminiとの通信に失敗しました");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🤖";
+        input.focus();
+      }
     }
 
     async function sendMsg() {
@@ -738,7 +819,7 @@
       renderSidebar();
 
       const chatBody = document.getElementById("chat-body");
-      chatBody.className = "";
+      chatBody.className = "chat-body-active";
 
       const group = groups.find((g) => g.id === groupId);
       const memberCount = (group?.members || []).length;
