@@ -305,8 +305,21 @@ export async function getUser(id) {
 }
 
 export async function updateProfile(id, fields) {
-  const u = users.get(id);
-  if (!u) return null;
+  let u = users.get(id);
+  if (!u) {
+    // サーバー再起動でユーザーデータが消えた場合、JWTのidで再生成する。
+    // google_subが不明なためbySub登録はしない（再ログイン時に新idが発行される）。
+    u = {
+      id,
+      google_sub: `recovered_${id}`,
+      email: null,
+      name: null,
+      picture: null,
+      createdAt: Date.now(),
+      profile: emptyProfile(),
+    };
+    users.set(id, u);
+  }
   if (!u.profile) u.profile = emptyProfile();
   Object.assign(u.profile, fields);
   u.profile.profileComplete = !!(u.profile.nickname && u.profile.bio && u.profile.goal);
