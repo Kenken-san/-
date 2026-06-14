@@ -80,6 +80,12 @@ app.post("/api/auth/google", async (req, res) => {
   }
 });
 
+// --- Config ------------------------------------------------------------------
+
+app.get("/api/config", (req, res) => {
+  res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID });
+});
+
 // --- Who am I ----------------------------------------------------------------
 
 app.get("/api/me", requireSession, async (req, res) => {
@@ -417,7 +423,8 @@ app.post("/api/availability", requireSession, async (req, res) => {
       target: { id: them.id, nickname: them.profile?.nickname || "?" },
       windows,
       bestSlot: slot,
-      hasData: myBusy.length > 0 && theirBusy.length > 0,
+      hasData: theirBusy.length > 0,
+      myHasData: myBusy.length > 0,
       privacyNote:
         "お互いの予定の中身は共有されません。二人とも空いている時間だけを計算しています。",
     });

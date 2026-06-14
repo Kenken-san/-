@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>StudyMatch — チャット</title>
+  <script src="https://accounts.google.com/gsi/client" async></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -304,6 +305,18 @@
     }
     .avail-no-data { font-size: 0.82rem; color: #777; line-height: 1.7; }
     .avail-privacy { font-size: 0.68rem; color: #bbb; margin-top: 0.5rem; }
+    .cal-connect-btn {
+      padding: 0.45rem 1rem;
+      background: #38a169;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .cal-connect-btn:hover { background: #2f855a; }
+    .cal-connect-btn:disabled { opacity: 0.6; cursor: default; }
 
     @media (max-width: 560px) {
       .sidebar { width: 100%; display: none; }
@@ -345,6 +358,7 @@
 
   <script>
     let myId = null;
+    let googleClientId = null;
     let currentTab = "connections";
     let currentPartnerId = null;
     let pollTimer = null;
@@ -539,6 +553,41 @@
       }
     }
 
+    async function fetchConfig() {
+      try {
+        const r = await fetch("/api/config");
+        const d = await r.json();
+        googleClientId = d.googleClientId;
+      } catch {}
+    }
+
+    function connectCalendar() {
+      if (!googleClientId || typeof google === "undefined") return;
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: googleClientId,
+        scope: "https://www.googleapis.com/auth/calendar.readonly",
+        callback: async (tokenResponse) => {
+          if (!tokenResponse.access_token) return;
+          const btn = document.getElementById("cal-connect-btn");
+          if (btn) { btn.disabled = true; btn.textContent = "連携中..."; }
+          try {
+            const r = await fetch("/api/calendar/connect", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                accessToken: tokenResponse.access_token,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              }),
+            });
+            if (r.ok && currentPartnerId) loadAvailability(currentPartnerId);
+          } catch {
+            if (btn) { btn.disabled = false; btn.textContent = "📅 Googleカレンダーを連携する"; }
+          }
+        },
+      });
+      tokenClient.requestAccessToken();
+    }
+
     function toggleAvail() {
       const card = document.getElementById("avail-card");
       const btn = document.getElementById("avail-toggle-btn");
@@ -567,8 +616,12 @@
         if (!data.hasData) {
           body.innerHTML = `
             <div class="avail-no-data">
-              どちらかのカレンダーがまだ連携されていません。<br>
-              カレンダーを連携すると、二人の空き時間が自動的に計算されます。
+              相手のカレンダーデータがまだ取得できていません。
+            </div>
+            <div style="margin-top:0.5rem">
+              <button id="cal-connect-btn" class="cal-connect-btn" onclick="connectCalendar()">
+                📅 Googleカレンダーを連携する
+              </button>
             </div>
             <div class="avail-privacy">${esc(data.privacyNote)}</div>`;
           return;
@@ -589,6 +642,14 @@
             <div class="plan-title">二人とも空いている時間</div>
             <div class="avail-windows">
               ${data.windows.map((w) => `<span class="avail-chip">${esc(w.dayLabel)} ${esc(w.start)}〜${esc(w.end)}</span>`).join("")}
+            </div>`;
+        }
+        if (!data.myHasData) {
+          html += `
+            <div style="margin-top:0.5rem">
+              <button id="cal-connect-btn" class="cal-connect-btn" onclick="connectCalendar()">
+                📅 Googleカレンダーを連携する
+              </button>
             </div>`;
         }
         html += `<div class="avail-privacy">${esc(data.privacyNote)}</div>`;
@@ -661,7 +722,7 @@
         const { user } = await meRes.json();
         myId = user.id;
 
-        await loadSidebarData();
+        await Promise.all([fetchConfig(), loadSidebarData()]);
 
         // Auto-open from URL param ?with=
         const params = new URLSearchParams(location.search);
