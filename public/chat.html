@@ -204,6 +204,33 @@
       font-size: 0.85rem;
     }
     .send-btn:disabled { opacity: 0.5; cursor: default; }
+    .ask-gemini-btn {
+      padding: 0.65rem 0.9rem;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 1rem;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .ask-gemini-btn:disabled { opacity: 0.5; cursor: default; }
+    .bubble.gemini {
+      background: linear-gradient(135deg, #f3f0ff, #ede8ff);
+      color: #3d2c8d;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      border: 1px solid #c4b5f4;
+      max-width: 85%;
+      white-space: pre-wrap;
+    }
+    .gemini-label {
+      font-size: 0.68rem;
+      color: #764ba2;
+      font-weight: 700;
+      margin-bottom: 2px;
+      align-self: flex-start;
+    }
 
     /* Coach card */
     .coach-card {
@@ -496,8 +523,9 @@
           <div style="text-align:center;color:#aaa;font-size:0.8rem;padding:1rem">読み込み中...</div>
         </div>
         <div class="input-bar">
-          <input type="text" id="msg-input" placeholder="メッセージを入力…"
+          <input type="text" id="msg-input" placeholder="メッセージ入力… / 🤖で質問"
             onkeydown="if(event.key==='Enter')sendMsg()" />
+          <button class="ask-gemini-btn" id="ask-gemini-btn" onclick="askGemini()" title="Geminiに質問する">🤖</button>
           <button class="send-btn" id="send-btn" onclick="sendMsg()">送信</button>
         </div>`;
 
@@ -677,6 +705,32 @@
       }
     }
 
+    async function askGemini() {
+      const input = document.getElementById("msg-input");
+      const btn = document.getElementById("ask-gemini-btn");
+      if (!input || !currentPartnerId) return;
+      const question = input.value.trim();
+      if (!question) return;
+
+      input.value = "";
+      btn.disabled = true;
+      btn.textContent = "⏳";
+      try {
+        await fetch(`/api/ask-gemini/${currentPartnerId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question }),
+        });
+        await fetchMessages();
+      } catch {
+        input.value = question;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "🤖";
+        input.focus();
+      }
+    }
+
     async function fetchMessages() {
       if (!currentPartnerId) return;
       try {
@@ -698,6 +752,13 @@
       }
 
       wrap.innerHTML = msgs.map((m) => {
+        if (m.fromId === "gemini") {
+          return `<div>
+            <div class="gemini-label">🤖 Gemini</div>
+            <div class="bubble gemini">${esc(m.text)}</div>
+            <div class="bubble-time" style="text-align:left">${fmtTime(m.createdAt)}</div>
+          </div>`;
+        }
         const isMine = m.fromId === myId;
         return `<div>
           <div class="bubble ${isMine ? "mine" : "theirs"}">${esc(m.text)}</div>
