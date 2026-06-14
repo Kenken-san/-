@@ -608,15 +608,37 @@
           body.innerHTML = `<div class="avail-no-data" style="color:var(--danger)">${esc(data.error || "読み込みに失敗しました")}</div>`;
           return;
         }
-        if (!data.hasData) {
+        const theirHasData = data.hasData;
+        const myHasData = data.myHasData;
+        const partnerName = esc(data.target?.nickname || "相手");
+
+        if (!theirHasData && !myHasData) {
           body.innerHTML = `
-            <div class="avail-no-data">カレンダーデータがありません。カレンダーを連携すると共通の空き時間が分かります。</div>
+            <div class="avail-no-data">カレンダーを連携すると${partnerName}との共通の空き時間が分かります。</div>
             <div style="margin-top:0.5rem">
               <button id="cal-connect-btn" class="cal-connect-btn" onclick="connectCalendar('cal-connect-btn')">Googleカレンダーを連携</button>
             </div>
             <div class="avail-privacy">${esc(data.privacyNote)}</div>`;
           return;
         }
+
+        if (!myHasData) {
+          body.innerHTML = `
+            <div class="avail-no-data">${partnerName}のカレンダーデータがあります。あなたのカレンダーも連携すると共通の空き時間が分かります。</div>
+            <div style="margin-top:0.5rem">
+              <button id="cal-connect-btn" class="cal-connect-btn" onclick="connectCalendar('cal-connect-btn')">Googleカレンダーを連携</button>
+            </div>
+            <div class="avail-privacy">${esc(data.privacyNote)}</div>`;
+          return;
+        }
+
+        if (!theirHasData) {
+          body.innerHTML = `
+            <div class="avail-no-data">${partnerName}がカレンダーを連携するのを待っています。</div>
+            <div class="avail-privacy">${esc(data.privacyNote)}</div>`;
+          return;
+        }
+
         let html = "";
         if (data.bestSlot) {
           html += `<div class="best-slot">
@@ -632,11 +654,8 @@
             <div class="avail-windows">
               ${data.windows.map((w) => `<span class="avail-chip">${dateLabel(w.day)} ${esc(w.start)}–${esc(w.end)}</span>`).join("")}
             </div>`;
-        }
-        if (!data.myHasData) {
-          html += `<div style="margin-top:0.5rem">
-            <button id="cal-connect-btn" class="cal-connect-btn" onclick="connectCalendar('cal-connect-btn')">Googleカレンダーを連携</button>
-          </div>`;
+        } else {
+          html += `<div class="avail-no-data">二人とも空いている時間帯が見つかりませんでした。</div>`;
         }
         html += `<div class="avail-privacy">${esc(data.privacyNote)}</div>`;
         body.innerHTML = html;

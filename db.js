@@ -70,6 +70,17 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 浪人生: 月〜土 8:00〜22:00 勉強、日曜は午後から
+      busyBlocks: [
+        { day: 0, start: "08:00", end: "22:00" },
+        { day: 1, start: "08:00", end: "22:00" },
+        { day: 2, start: "08:00", end: "22:00" },
+        { day: 3, start: "08:00", end: "22:00" },
+        { day: 4, start: "08:00", end: "22:00" },
+        { day: 5, start: "08:00", end: "20:00" },
+        { day: 6, start: "13:00", end: "20:00" },
+      ],
     },
   },
   {
@@ -89,6 +100,17 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 夜型浪人生: 午前は睡眠、昼〜夜は集中
+      busyBlocks: [
+        { day: 0, start: "11:00", end: "23:00" },
+        { day: 1, start: "11:00", end: "23:00" },
+        { day: 2, start: "11:00", end: "23:00" },
+        { day: 3, start: "11:00", end: "23:00" },
+        { day: 4, start: "11:00", end: "23:00" },
+        { day: 5, start: "12:00", end: "22:00" },
+        { day: 6, start: "12:00", end: "22:00" },
+      ],
     },
   },
   {
@@ -108,6 +130,15 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 社会人営業: 月〜金 8:30〜20:30 (残業込み)
+      busyBlocks: [
+        { day: 0, start: "08:30", end: "20:30" },
+        { day: 1, start: "08:30", end: "20:30" },
+        { day: 2, start: "08:30", end: "20:30" },
+        { day: 3, start: "08:30", end: "20:30" },
+        { day: 4, start: "08:30", end: "20:30" },
+      ],
     },
   },
   {
@@ -127,6 +158,14 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // フリーランス: 月〜木 10:00〜18:00 仕事
+      busyBlocks: [
+        { day: 0, start: "10:00", end: "18:00" },
+        { day: 1, start: "10:00", end: "18:00" },
+        { day: 2, start: "10:00", end: "18:00" },
+        { day: 3, start: "10:00", end: "18:00" },
+      ],
     },
   },
   {
@@ -146,6 +185,15 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 大学生: 月〜金 10:00〜17:00 授業
+      busyBlocks: [
+        { day: 0, start: "10:00", end: "17:00" },
+        { day: 1, start: "10:00", end: "17:00" },
+        { day: 2, start: "10:00", end: "17:00" },
+        { day: 3, start: "10:00", end: "17:00" },
+        { day: 4, start: "10:00", end: "17:00" },
+      ],
     },
   },
   {
@@ -165,6 +213,15 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 銀行員: 月〜金 7:00〜19:00
+      busyBlocks: [
+        { day: 0, start: "07:00", end: "19:00" },
+        { day: 1, start: "07:00", end: "19:00" },
+        { day: 2, start: "07:00", end: "19:00" },
+        { day: 3, start: "07:00", end: "19:00" },
+        { day: 4, start: "07:00", end: "19:00" },
+      ],
     },
   },
   {
@@ -184,6 +241,15 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 大学生: 月・水・金 9:00〜16:00、火・木 10:00〜18:00
+      busyBlocks: [
+        { day: 0, start: "09:00", end: "16:00" },
+        { day: 1, start: "10:00", end: "18:00" },
+        { day: 2, start: "09:00", end: "16:00" },
+        { day: 3, start: "10:00", end: "18:00" },
+        { day: 4, start: "09:00", end: "16:00" },
+      ],
     },
   },
   {
@@ -203,6 +269,15 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // ITディレクター: 月〜金 10:00〜22:00 (残業多め)
+      busyBlocks: [
+        { day: 0, start: "10:00", end: "22:00" },
+        { day: 1, start: "10:00", end: "22:00" },
+        { day: 2, start: "10:00", end: "22:00" },
+        { day: 3, start: "10:00", end: "22:00" },
+        { day: 4, start: "10:00", end: "22:00" },
+      ],
     },
   },
   {
@@ -222,6 +297,16 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 高校生: 月〜土 8:00〜18:30 (学校・自習)
+      busyBlocks: [
+        { day: 0, start: "08:00", end: "18:30" },
+        { day: 1, start: "08:00", end: "18:30" },
+        { day: 2, start: "08:00", end: "18:30" },
+        { day: 3, start: "08:00", end: "18:30" },
+        { day: 4, start: "08:00", end: "18:30" },
+        { day: 5, start: "08:00", end: "15:00" },
+      ],
     },
   },
   {
@@ -241,6 +326,16 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 不動産業: 月〜金 9:00〜19:00、土 9:00〜15:00
+      busyBlocks: [
+        { day: 0, start: "09:00", end: "19:00" },
+        { day: 1, start: "09:00", end: "19:00" },
+        { day: 2, start: "09:00", end: "19:00" },
+        { day: 3, start: "09:00", end: "19:00" },
+        { day: 4, start: "09:00", end: "19:00" },
+        { day: 5, start: "09:00", end: "15:00" },
+      ],
     },
   },
   {
@@ -260,6 +355,15 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 外資系: 月〜金 8:00〜20:00
+      busyBlocks: [
+        { day: 0, start: "08:00", end: "20:00" },
+        { day: 1, start: "08:00", end: "20:00" },
+        { day: 2, start: "08:00", end: "20:00" },
+        { day: 3, start: "08:00", end: "20:00" },
+        { day: 4, start: "08:00", end: "20:00" },
+      ],
     },
   },
   {
@@ -279,6 +383,15 @@ const DUMMY_USERS = [
       country: "日本",
       profileComplete: true,
       embedding: null,
+      calendarConnected: true,
+      // 情報系大学生: 月・水・金 9:00〜16:00、火・木 10:00〜18:00
+      busyBlocks: [
+        { day: 0, start: "09:00", end: "16:00" },
+        { day: 1, start: "10:00", end: "18:00" },
+        { day: 2, start: "09:00", end: "16:00" },
+        { day: 3, start: "10:00", end: "18:00" },
+        { day: 4, start: "09:00", end: "16:00" },
+      ],
     },
   },
 ];

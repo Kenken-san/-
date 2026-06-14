@@ -428,20 +428,25 @@ app.post("/api/availability", requireSession, async (req, res) => {
     const myBusy = getBusyBlocks(me);
     const theirBusy = getBusyBlocks(them);
 
-    const windows = sharedFreeWindows(myBusy, theirBusy, {
+    const myHasData = myBusy.length > 0 || !!(me.profile?.calendarConnected);
+    const theirHasData = theirBusy.length > 0 || !!(them.profile?.calendarConnected);
+    const bothHaveData = myHasData && theirHasData;
+
+    const windows = bothHaveData ? sharedFreeWindows(myBusy, theirBusy, {
       earliest: "06:00",
       latest: "24:00",
       minMinutes: 30,
       limit: 6,
-    });
+    }) : [];
 
-    const slot = bestSlot(windows, 25);
+    const slot = bothHaveData ? bestSlot(windows, 25) : null;
 
     res.json({
       target: { id: them.id, nickname: them.profile?.nickname || "?" },
       windows,
       bestSlot: slot,
-      hasData: myBusy.length > 0 && theirBusy.length > 0,
+      hasData: theirHasData,
+      myHasData,
       privacyNote: "お互いの予定の中身は共有されません。二人とも空いている時間だけを計算しています。",
     });
   } catch (err) {
@@ -505,7 +510,7 @@ app.post("/api/calendar/connect", requireSession, async (req, res) => {
     }
     const busy = data.calendars?.primary?.busy || [];
     const busyBlocks = collapseToWeeklyTemplate(busy, timeZone);
-    await updateProfile(req.uid, { busyBlocks });
+    await updateProfile(req.uid, { busyBlocks, calendarConnected: true });
     res.json({ ok: true, blockCount: busyBlocks.length });
   } catch (err) {
     console.error("Calendar connect error:", err.message);
