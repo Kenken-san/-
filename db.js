@@ -273,6 +273,7 @@ const DUMMY_USERS = [
 // seed dummy users
 for (const u of DUMMY_USERS) {
   u.profile.busyBlocks = DUMMY_SCHEDULES[u.id] || [];
+  u.profile.calendarConnected = true;
   users.set(u.id, u);
   bySub.set(u.google_sub, u.id);
 }

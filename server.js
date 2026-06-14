@@ -422,8 +422,8 @@ app.post("/api/availability", requireSession, async (req, res) => {
       target: { id: them.id, nickname: them.profile?.nickname || "?" },
       windows,
       bestSlot: slot,
-      hasData: !!(them.profile?.calendarConnected),
-      myHasData: !!(me.profile?.calendarConnected),
+      hasData: !!(them.profile?.calendarConnected) || theirBusy.length > 0,
+      myHasData: !!(me.profile?.calendarConnected) || myBusy.length > 0,
       privacyNote:
         "お互いの予定の中身は共有されません。二人とも空いている時間だけを計算しています。",
     });
